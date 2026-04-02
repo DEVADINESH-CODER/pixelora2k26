@@ -314,14 +314,6 @@ async function releaseIplSlot() {
   });
 }
 
-async function saveRegistrationToFirebase(registrationData) {
-  if (!firebaseDb) return;
-  await firebaseDb.collection('registrations').add({
-    ...registrationData,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-}
-
 watchIplSlots();
 
 if (adminSecret) {
@@ -639,14 +631,6 @@ if (regForm && regSubmit) {
       if (!response.ok) {
         throw new Error(result.error || 'Submission failed.');
       }
-
-      await saveRegistrationToFirebase({
-        ...required,
-        technicalEvents,
-        nonTechnicalEvents,
-        technicalTeam: technicalTeam.data,
-        nonTechnicalTeam: nonTechnicalTeam.data
-      });
 
       regForm.reset();
       refreshTeamDetails();

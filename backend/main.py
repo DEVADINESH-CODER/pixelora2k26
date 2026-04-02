@@ -82,6 +82,8 @@ if FIREBASE_SERVICE_ACCOUNT_JSON:
         firebase_db = None
         firebase_bucket = None
 
+sync_local_registrations_to_firestore()
+
 ALLOWED_YEARS = {"I-Year", "II-Year", "III-Year", "IV-Year"}
 ALLOWED_TECHNICAL_EVENTS = {"Innopitch", "Devfolio", "Promptcraft"}
 ALLOWED_NON_TECHNICAL_EVENTS = {
@@ -128,25 +130,66 @@ def normalize_record(record: dict) -> dict:
     }
 
 
-def load_registrations() -> list[dict]:
+def load_local_registrations() -> list[dict]:
     records: list[dict] = []
 
-    if firebase_db is not None:
-        for document in firebase_db.collection("registrations").stream():
-            records.append(normalize_record(document.to_dict() | {"id": document.id}))
-    elif REGISTRATIONS_FILE.exists():
-        with REGISTRATIONS_FILE.open("r", encoding="utf-8") as file:
-            for line in file:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    records.append(normalize_record(json.loads(line)))
-                except json.JSONDecodeError:
-                    continue
+    if not REGISTRATIONS_FILE.exists():
+        return records
 
+    with REGISTRATIONS_FILE.open("r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(normalize_record(json.loads(line)))
+            except json.JSONDecodeError:
+                continue
+
+    return records
+
+
+def load_firestore_registrations() -> list[dict]:
+    if firebase_db is None:
+        return []
+
+    records: list[dict] = []
+    for document in firebase_db.collection("registrations").stream():
+        records.append(normalize_record(document.to_dict() | {"id": document.id}))
+    return records
+
+
+def load_registrations() -> list[dict]:
+    records_by_id: dict[str, dict] = {}
+
+    for record in load_local_registrations() + load_firestore_registrations():
+        record_id = str(record.get("id", "")).strip()
+        if not record_id:
+            continue
+        records_by_id[record_id] = record
+
+    records = list(records_by_id.values())
     records.sort(key=lambda item: str(item.get("createdAt", "")), reverse=True)
     return records
+
+
+def sync_local_registrations_to_firestore() -> None:
+    if firebase_db is None:
+        return
+
+    for record in load_local_registrations():
+        record_id = str(record.get("id", "")).strip()
+        if not record_id:
+            continue
+        firebase_db.collection("registrations").document(record_id).set(record)
+
+
+def save_registration_record(record: dict) -> None:
+    with REGISTRATIONS_FILE.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(record, ensure_ascii=True) + "\n")
+
+    if firebase_db is not None:
+        firebase_db.collection("registrations").document(str(record["id"])).set(record)
 
 
 def flatten_registration_for_csv(record: dict) -> dict:
@@ -367,11 +410,7 @@ async def create_registration(
         "createdAt": created_at,
     }
 
-    if firebase_db is not None:
-        firebase_db.collection("registrations").document(registration_id).set(record)
-    else:
-        with REGISTRATIONS_FILE.open("a", encoding="utf-8") as file:
-            file.write(json.dumps(record, ensure_ascii=True) + "\n")
+    save_registration_record(record)
 
     return {"message": "Registration submitted successfully.", "id": registration_id}
 

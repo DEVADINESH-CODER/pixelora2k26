@@ -36,7 +36,10 @@ ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "*").strip()
 def parse_allowed_origins(raw_value: str) -> list[str]:
     if not raw_value or raw_value == "*":
         return ["*"]
-    return [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+
+    parsed = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+    cleaned = [origin for origin in parsed if "your-github-username.github.io" not in origin]
+    return cleaned if cleaned else ["*"]
 
 
 ALLOWED_ORIGINS = parse_allowed_origins(ALLOWED_ORIGINS_RAW)

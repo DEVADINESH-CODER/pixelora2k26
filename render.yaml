@@ -9,7 +9,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: ALLOWED_ORIGINS
-        value: https://your-github-username.github.io
+        value: https://pixelora-30fdb.web.app,https://pixelora-30fdb.firebaseapp.com,http://localhost:8000,http://127.0.0.1:8000
       - key: FIREBASE_STORAGE_BUCKET
         value: your-project-id.appspot.com
       - key: FIREBASE_SERVICE_ACCOUNT_JSON

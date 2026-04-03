@@ -209,6 +209,26 @@ function closeAdminPortal() {
   adminPortal.setAttribute('aria-hidden', 'true');
 }
 
+// Replace placeholder values with your Firebase project config before deployment.
+const FIREBASE_CONFIG = {
+  apiKey: APP_CONFIG.firebase?.apiKey || 'REPLACE_WITH_API_KEY',
+  authDomain: APP_CONFIG.firebase?.authDomain || 'REPLACE_WITH_AUTH_DOMAIN',
+  projectId: APP_CONFIG.firebase?.projectId || 'REPLACE_WITH_PROJECT_ID',
+  storageBucket: APP_CONFIG.firebase?.storageBucket || 'REPLACE_WITH_STORAGE_BUCKET',
+  messagingSenderId: APP_CONFIG.firebase?.messagingSenderId || 'REPLACE_WITH_MESSAGING_SENDER_ID',
+  appId: APP_CONFIG.firebase?.appId || 'REPLACE_WITH_APP_ID'
+};
+
+function hasFirebaseConfig(config) {
+  return Object.values(config).every((value) => value && !String(value).startsWith('REPLACE_WITH_'));
+}
+
+let firebaseDb = null;
+if (typeof firebase !== 'undefined' && hasFirebaseConfig(FIREBASE_CONFIG)) {
+  const app = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+  firebaseDb = app.firestore();
+}
+
 function getIplSlotsLeft() {
   return Math.max(0, IPL_TOTAL_SLOTS - iplRegisteredTeams);
 }
@@ -408,6 +428,32 @@ function createTeamDetailsMarkup(groupName, selectedEvent, selectedSize) {
         <input type="text" name="${safeGroup}TeamMember${idx}" required>
       </label>
     `;
+
+    function normalizeRegistrationRecord(registration) {
+      return {
+        id: registration.id || '',
+        name: registration.name || '',
+        email: registration.email || '',
+        whatsapp: registration.whatsapp || '',
+        year: registration.year || '',
+        collegeName: registration.collegeName || '',
+        departmentName: registration.departmentName || '',
+        technicalEvents: registration.technicalEvents || '',
+        technicalTeam: registration.technicalTeam || {},
+        nonTechnicalEvents: registration.nonTechnicalEvents || '',
+        nonTechnicalTeam: registration.nonTechnicalTeam || {},
+        food: registration.food || '',
+        paymentScreenshot: registration.paymentScreenshot || '',
+        createdAt: registration.createdAt || ''
+      };
+    }
+
+    async function loadFirestoreRegistrations() {
+      if (!firebaseDb) return [];
+
+      const snapshot = await firebaseDb.collection('registrations').get();
+      return snapshot.docs.map((document) => normalizeRegistrationRecord({ id: document.id, ...document.data() }));
+    }
   }
 
   return `
@@ -423,11 +469,26 @@ function createTeamDetailsMarkup(groupName, selectedEvent, selectedSize) {
       <span>Team Leader Name</span>
       <input type="text" name="${safeGroup}TeamLeader" required>
     </label>
-    ${
-      rule.min !== rule.max
+        const registrations = Array.isArray(result.registrations) ? result.registrations : [];
+        if (registrations.length) {
+          renderAdminRegistrations(registrations);
+          setAdminStatus(`Loaded ${registrations.length} registrations.`, 'ok');
+          return;
+        }
+
+        const firestoreRegistrations = await loadFirestoreRegistrations();
+        renderAdminRegistrations(firestoreRegistrations);
+        setAdminStatus(`Loaded ${firestoreRegistrations.length} registrations from Firestore.`, 'ok');
         ? `<label class="reg-field">
-            <span>Team Size</span>
-            <select name="${safeGroup}TeamSize" required>
+        try {
+          const firestoreRegistrations = await loadFirestoreRegistrations();
+          renderAdminRegistrations(firestoreRegistrations);
+          setAdminStatus(`Loaded ${firestoreRegistrations.length} registrations from Firestore.`, 'ok');
+          return;
+        } catch (_fallbackError) {
+          setAdminStatus(error.message || 'Unable to load registrations.', 'err');
+          adminTableBody.innerHTML = '<tr><td class="admin-empty" colspan="6">Unable to load registrations.</td></tr>';
+        }
               ${Array.from({ length: rule.max - rule.min + 1 }, (_, i) => {
                 const size = rule.min + i;
                 const selected = size === teamSize ? 'selected' : '';

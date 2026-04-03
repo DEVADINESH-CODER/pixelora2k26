@@ -1,12 +1,12 @@
 window.__PIXELORA_CONFIG__ = {
-  apiBaseUrl: "https://pixelora-9git.onrender.com",
+  apiBaseUrl: "https://pixelora2k26.onrender.com",
   firebase: {
-    apiKey: "AIzaSyBkuiamDyaBeu4tmtKv9Y54xrlmFDklCV0",
-    authDomain: "pixelora2k26.firebaseapp.com",
-    projectId: "pixelora2k26",
-    storageBucket: "pixelora2k26.firebasestorage.app",
-    messagingSenderId: "828857506457",
-    appId: "1:828857506457:web:ee4c93ac53dff8ad2b3608",
-    measurementId: "G-94ZKZCFLY2"
+    apiKey: "AIzaSyDkWRr1_-xmMrWdIMdyi4Dj6nXsg1YsN1c",
+    authDomain: "pixelora2k26-3fbd7.firebaseapp.com",
+    projectId: "pixelora2k26-3fbd7",
+    storageBucket: "pixelora2k26-3fbd7.firebasestorage.app",
+    messagingSenderId: "1002790219618",
+    appId: "1:1002790219618:web:001da98955416a1ccc063b",
+    measurementId: "G-GZZSLCMMF9"
   }
 };

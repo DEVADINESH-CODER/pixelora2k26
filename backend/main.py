@@ -91,6 +91,7 @@ ALLOWED_NON_TECHNICAL_EVENTS = {
     "Channel Surfing",
 }
 ALLOWED_FOOD = {"Veg", "Non-Veg"}
+IPL_TOTAL_SLOTS = 10
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 

@@ -515,5 +515,8 @@ async def create_registration(
 
 
 # Serve frontend from the sibling frontend folder so /api and site share one origin.
+if UPLOAD_DIR.parent.exists():
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR.parent), name="uploads")
+
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

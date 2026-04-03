@@ -298,10 +298,23 @@ footer{padding:clamp(50px,8vw,90px) clamp(5%,8vw,10%);border-top:1px solid var(-
 .admin-team strong{color:#fff;font-size:.85rem}
 .admin-team span{opacity:.7;font-size:.78rem;line-height:1.45}
 .admin-empty{padding:2rem;text-align:center;opacity:.6}
+.admin-view-link{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .75rem;border-radius:999px;border:1px solid rgba(0,255,136,.35);background:rgba(0,255,136,.1);color:var(--g1);font-size:.74rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;text-decoration:none;transition:transform .2s var(--ease),filter .2s var(--ease),border-color .2s var(--ease)}
+.admin-view-link:hover{transform:translateY(-1px);filter:brightness(1.08);border-color:rgba(0,255,136,.55)}
 
 @media(max-width:768px){
   .admin-shell{max-height:95vh}
   .admin-actions{width:100%}
   .admin-btn{flex:1;min-width:0}
   .admin-secret-field{min-width:100%}
+}
+
+/* ── ADMIN STANDALONE PAGE ── */
+.admin-page{min-height:100vh;padding:clamp(24px,4vw,48px) clamp(5%,8vw,10%);overflow-x:hidden}
+.admin-page-wrap{max-width:1200px;margin:0 auto;position:relative;z-index:1;display:grid;gap:1rem}
+.admin-topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.admin-page-title{font-size:clamp(1.2rem,3vw,2rem);font-weight:800;letter-spacing:1px;background:var(--grad);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.admin-page .admin-shell{width:100%;max-height:none}
+
+@media(max-width:768px){
+  .admin-topbar{flex-direction:column;align-items:flex-start}
 }

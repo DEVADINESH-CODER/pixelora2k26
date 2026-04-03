@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.so
 
 # Virtual environments
 .venv/
@@ -14,9 +15,13 @@ env/
 .env.*
 !.env.example
 
+# Local frontend config overrides
+frontend/config.local.js
+
 # Backend runtime/generated data
-backend/data/
-backend/uploads/
+backend/data/registrations.jsonl
+backend/uploads/payment_screenshots/*
+!backend/uploads/payment_screenshots/.gitkeep
 backend/firebase-service-account.json
 
 # Tooling caches
@@ -27,6 +32,7 @@ backend/firebase-service-account.json
 # Logs and temp files
 *.log
 *.tmp
+*.bak
 
 # OS and editor files
 .DS_Store

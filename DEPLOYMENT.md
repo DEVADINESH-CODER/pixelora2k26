@@ -30,6 +30,8 @@ Edit frontend/config.js:
   - https://pixelora-backend.onrender.com
 - Fill firebase object with your web app Firebase values.
 
+You can use `frontend/config.example.js` as a template.
+
 ## 3. Deploy Backend to Render
 
 ### Option A: Blueprint deploy (recommended)
@@ -43,6 +45,7 @@ Edit frontend/config.js:
 6. Verify env vars:
    - ALLOWED_ORIGINS = your GitHub Pages origin
    - FIREBASE_STORAGE_BUCKET = your-project-id.appspot.com
+   - ADMIN_PORTAL_SECRET = strong secret string
 7. Deploy.
 
 ### Option B: Manual Web Service
@@ -83,11 +86,22 @@ If you use a custom domain, include that domain too, comma-separated.
 
 ## 6. Admin Portal
 
-- Open the hidden portal with `Ctrl+F7` on the frontend.
-- If you set `ADMIN_PORTAL_SECRET` in Render, the portal will send the secret in the `X-Admin-Secret` header.
-- The portal can list registrations and download a CSV export from the backend.
+- Press `Ctrl+F7` on the frontend.
+- Enter the admin secret.
+- If valid, it opens `frontend/admin.html`.
+- The admin page can list registrations, download CSV, delete all data, and view uploaded payment screenshots.
 
-## 7. Verify End-to-End
+## 7. Local Development Env
+
+1. Copy `backend/.env.example` to `backend/.env`.
+2. Set `ADMIN_PORTAL_SECRET` and optional Firebase values.
+3. Run backend with env file:
+
+```powershell
+uvicorn main:app --reload --host 0.0.0.0 --port 8000 --env-file .env
+```
+
+## 8. Verify End-to-End
 
 1. Open backend health endpoint:
    - https://your-render-service.onrender.com/api/health
@@ -102,3 +116,4 @@ If you use a custom domain, include that domain too, comma-separated.
 - Render free tier can spin down after inactivity; first request may be slow.
 - Do not commit private Firebase service account JSON into git.
 - The backend still supports local file fallback if Firebase env vars are not set.
+- Do not commit `backend/.env`, local uploads, or local registration JSONL data.

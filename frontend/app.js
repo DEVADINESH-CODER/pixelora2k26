@@ -80,10 +80,48 @@ let iplRegisteredTeams = 0;
 let iplStatusPollHandle = null;
 
 const APP_CONFIG = window.__PIXELORA_CONFIG__ || {};
-const API_BASE_URL = String(APP_CONFIG.apiBaseUrl || '').trim().replace(/\/+$/, '');
+const configuredApiBaseUrl = String(APP_CONFIG.apiBaseUrl || '').trim().replace(/\/+$/, '');
+const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = isLocalHost ? '' : configuredApiBaseUrl;
+const ADMIN_SHORTCUT_AUTH_KEY = 'pixelora-admin-shortcut-auth';
 
 function buildApiUrl(path) {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
+function getStoredAdminSecret() {
+  return (localStorage.getItem('pixelora-admin-secret') || '').trim();
+}
+
+async function verifyAdminSecret(secret) {
+  const response = await fetch(buildApiUrl('/api/admin/registrations'), {
+    headers: { 'X-Admin-Secret': secret }
+  });
+
+  if (!response.ok) {
+    throw new Error('Invalid admin secret.');
+  }
+}
+
+async function openAdminPageWithSecretCheck() {
+  const defaultSecret = getStoredAdminSecret();
+  const enteredSecret = window.prompt('Enter admin secret to open admin page:', defaultSecret);
+  if (enteredSecret === null) return;
+
+  const secret = enteredSecret.trim();
+  if (!secret) {
+    window.alert('Admin secret is required.');
+    return;
+  }
+
+  try {
+    await verifyAdminSecret(secret);
+    localStorage.setItem('pixelora-admin-secret', secret);
+    sessionStorage.setItem(ADMIN_SHORTCUT_AUTH_KEY, String(Date.now()));
+    window.location.href = 'admin.html';
+  } catch (_error) {
+    window.alert('Invalid admin secret. Access denied.');
+  }
 }
 
 function getAdminSecretValue() {
@@ -386,25 +424,9 @@ addEventListener('keydown', (event) => {
 
   if (isCtrlF7 || isMetaF7) {
     event.preventDefault();
-    if (adminPortal?.classList.contains('open')) {
-      closeAdminPortal();
-    } else {
-      openAdminPortal();
-    }
-  }
-
-  if (event.key === 'Escape' && adminPortal?.classList.contains('open')) {
-    closeAdminPortal();
+    openAdminPageWithSecretCheck();
   }
 });
-
-if (adminPortal) {
-  adminPortal.addEventListener('click', (event) => {
-    if (event.target === adminPortal) {
-      closeAdminPortal();
-    }
-  });
-}
 
 if (regForm) {
   regForm.querySelectorAll('input[name="technicalEvents"]').forEach((input) => {

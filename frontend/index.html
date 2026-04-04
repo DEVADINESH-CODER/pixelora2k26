@@ -84,7 +84,7 @@
 </section>
 
 <!-- POSTER SECTION -->
-<section id="poster" style="padding:clamp(60px,10vw,120px) 5%; min-height:auto; background:radial-gradient(circle at 50% 50%, rgba(0,255,136,0.08) 0%, #030303 75%)">
+<section id="poster" style="padding:clamp(60px,10vw,120px) 5%; min-height:auto; background:radial-gradient(circle at 50% 50%, rgba(var(--accent-rgb),0.16) 0%, var(--bg) 75%)">
   <div class="rv poster-container" style="width:100%; max-width:1000px; margin:0 auto">
     <!-- Glow behind the poster -->
     <div style="position:absolute; inset:20px; background:var(--grad); filter:blur(100px); opacity:0.15; z-index:-1"></div>
@@ -311,7 +311,7 @@
       <p id="reg-status" class="reg-status" aria-live="polite"></p>
     </form>
     <div style="display:flex; flex-direction:column; align-items:center; gap:1.2rem; margin-top:1.5rem">
-      <a href="https://chat.whatsapp.com/Hbq74sCWK0W3TTt8L43u6s?mode=gi_t" target="_blank" rel="noopener noreferrer" class="btn bo" style="border-color:#25D366; color:#25D366; display:flex; align-items:center; gap:0.6rem">
+      <a href="https://chat.whatsapp.com/Hbq74sCWK0W3TTt8L43u6s?mode=gi_t" target="_blank" rel="noopener noreferrer" class="btn bo" style="border-color:var(--warm); color:#ffffff; background:linear-gradient(135deg,var(--g1),var(--warm)); box-shadow:0 12px 32px rgba(var(--warm-rgb),0.45); display:flex; align-items:center; gap:0.6rem">
         <i class="ph ph-whatsapp-logo" style="font-size:1.2rem"></i> JOIN WHATSAPP
       </a>
     </div>
@@ -404,3 +404,4 @@
 <script src="app.js"></script>
 </body>
 </html>
+

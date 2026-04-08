@@ -143,6 +143,8 @@ def normalize_record(record: dict) -> dict:
         "nonTechnicalTeam": record.get("nonTechnicalTeam", {}),
         "food": record.get("food", ""),
         "paymentScreenshot": record.get("paymentScreenshot", ""),
+        "sessionData": record.get("sessionData", {}),
+        "teamMembers": record.get("teamMembers", []),
         "createdAt": created_at_value or "",
     }
 
@@ -295,6 +297,8 @@ def flatten_registration_for_csv(record: dict) -> dict:
         "nonTechnicalTeamMembers": ", ".join(non_technical_team.get("members", []) or []),
         "food": record.get("food", ""),
         "paymentScreenshot": record.get("paymentScreenshot", ""),
+        "sessionData": json.dumps(record.get("sessionData", {}), ensure_ascii=True),
+        "teamMembers": json.dumps(record.get("teamMembers", []), ensure_ascii=True),
         "createdAt": record.get("createdAt", ""),
     }
 
@@ -374,6 +378,8 @@ async def create_registration(
     nonTechnicalTeamSize: str | None = Form(None),
     nonTechnicalTeamMembers: str | None = Form(None),
     food: str = Form(...),
+    sessionData: str | None = Form(None),
+    teamMembers: str | None = Form(None),
     paymentScreenshot: UploadFile = File(...),
 ) -> dict[str, str]:
     name = name.strip()
@@ -393,6 +399,8 @@ async def create_registration(
     nonTechnicalTeamSize = (nonTechnicalTeamSize or '').strip() or None
     nonTechnicalTeamMembers = (nonTechnicalTeamMembers or '').strip() or None
     food = food.strip()
+    sessionData = (sessionData or '').strip() or None
+    teamMembers = (teamMembers or '').strip() or None
 
     if not all(
         [
@@ -461,6 +469,8 @@ async def create_registration(
 
     parsed_technical_members: list[str] = []
     parsed_nontechnical_members: list[str] = []
+    parsed_session_data: dict = {}
+    parsed_team_members: list[dict] = []
 
     if technicalTeamMembers:
         try:
@@ -481,6 +491,21 @@ async def create_registration(
             ]
         except json.JSONDecodeError:
             parsed_nontechnical_members = []
+
+    if sessionData:
+        try:
+            parsed_session_data = json.loads(sessionData)
+        except json.JSONDecodeError:
+            parsed_session_data = {}
+
+    if teamMembers:
+        try:
+            parsed_team_members = [
+                member if isinstance(member, dict) else {"value": member}
+                for member in json.loads(teamMembers)
+            ]
+        except json.JSONDecodeError:
+            parsed_team_members = []
 
     record = {
         "id": registration_id,
@@ -506,6 +531,8 @@ async def create_registration(
         },
         "food": food,
         "paymentScreenshot": payment_screenshot_ref,
+        "sessionData": parsed_session_data,
+        "teamMembers": parsed_team_members,
         "createdAt": created_at,
     }
 

@@ -231,89 +231,199 @@
 <section id="register">
   <h2 class="stitle rv">Register Now</h2>
   <p class="ssub rv">Claim Your Spot</p>
-  <div class="rcard rv" id="rcard">
-    <div style="text-align:left; margin-bottom:2rem; padding:1rem 1.1rem; border:1px solid var(--border); border-radius:14px; background:rgba(255,255,255,0.03)">
-      <h3 style="margin:0 0 .8rem; font-size:1rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--g1)">Rules</h3>
-      <p style="margin:0; font-size:.92rem; font-weight:600; line-height:1.8; opacity:.92">*One Person Can Register Only For One Technical<br>*One Person Can Register Only For One Non-Technical<br>*All participants must report on time.<br>*On-Spot Register Rs-200 Per Head</p>
+  <div class="rcard rv reg-workflow" id="rcard">
+    <div class="reg-rules">
+      <h3>Registration Guidelines</h3>
+      <p>Complete your registration step by step. Your draft is saved in this browser and submitted only after final confirmation.<br>Each participant can choose one technical event and one non-technical event.<br>Team details are finalized in the workflow and submitted together at the end.</p>
     </div>
-    <h3>Secure your spot at PIXELORA 2K26. Slots are filling fast.</h3>
-    <form id="reg-form" class="reg-form" novalidate>
-      <div class="reg-grid">
-        <label class="reg-field">
-          <span>Name</span>
-          <input type="text" name="name" autocomplete="name" required>
-        </label>
-        <label class="reg-field">
-          <span>Email</span>
-          <input type="email" name="email" autocomplete="email" required>
-        </label>
-        <label class="reg-field">
-          <span>Whatsapp Number</span>
-          <input type="tel" name="whatsapp" autocomplete="tel" required>
-        </label>
-        <label class="reg-field">
-          <span>Year</span>
-          <select name="year" required>
-            <option value="">Select Year</option>
-            <option value="I-Year">I-Year</option>
-            <option value="II-Year">II-Year</option>
-            <option value="III-Year">III-Year</option>
-            <option value="IV-Year">IV-Year</option>
-          </select>
-        </label>
-        <label class="reg-field">
-          <span>College Name</span>
-          <input type="text" name="collegeName" required>
-        </label>
-        <label class="reg-field">
-          <span>Department Name</span>
-          <input type="text" name="departmentName" required>
-        </label>
-      </div>
-      <div class="reg-field">
-        <span>Technical Events</span>
-        <div class="reg-checklist">
-          <label class="reg-option"><input type="radio" name="technicalEvents" value="Innopitch" required onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>Innopitch</span></label>
-          <label class="reg-option"><input type="radio" name="technicalEvents" value="Devfolio" onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>Devfolio</span></label>
-          <label class="reg-option"><input type="radio" name="technicalEvents" value="Promptcraft" onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>Promptcraft</span></label>
+    <div class="reg-shell">
+      <div class="reg-shell-head">
+        <div>
+          <span class="reg-kicker">Registration Portal</span>
+          <h3>Complete your registration through a guided workflow.</h3>
         </div>
-        <div id="technical-team-details" class="team-details empty" aria-live="polite"></div>
-      </div>
-      <div class="reg-field">
-        <span>Non-Technical Events</span>
-        <div class="reg-checklist">
-          <label class="reg-option"><input type="radio" name="nonTechnicalEvents" value="E-Sports (Free fire)" required onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>E-Sports (Free fire)</span></label>
-          <label class="reg-option" id="ipl-form-option"><input type="radio" name="nonTechnicalEvents" value="IPL Auction" onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>IPL Auction</span><em class="slot-inline" id="ipl-slot-form">(10 slots left)</em></label>
-          <label class="reg-option"><input type="radio" name="nonTechnicalEvents" value="Visual Connect" onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>Visual Connect</span></label>
-          <label class="reg-option"><input type="radio" name="nonTechnicalEvents" value="Channel Surfing" onchange="window.refreshTeamDetails && window.refreshTeamDetails()"><span>Channel Surfing</span></label>
+        <div class="reg-session-chip">
+          <span>Registration ID</span>
+          <strong id="session-main-id">TEMP001</strong>
         </div>
-        <div id="nontechnical-team-details" class="team-details empty" aria-live="polite"></div>
       </div>
-      <label class="reg-field">
-        <span>Food</span>
-        <select name="food" required>
-          <option value="">Select Food Preference</option>
-          <option value="Non-Veg">Non-Veg</option>
-          <option value="Veg">Veg</option>
-        </select>
-      </label>
-      <div class="reg-field" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:1rem">
-        <span style="display:block; margin-bottom:0.5rem; font-weight:700">Payment Details</span>
-        <p style="margin:0.3rem 0; opacity:0.92">Payment per head - Rs.150</p>
-        <p style="margin:0.3rem 0 0.8rem; opacity:0.92">UPI ID - sachinvelu6925@okaxis</p>
-        <img src="Payment_QR.jpeg" alt="Payment QR" style="width:220px; max-width:100%; height:auto; border-radius:10px; border:1px solid var(--border); display:block">
+      <div class="reg-progress" id="reg-progress">
+        <button type="button" class="active" data-step-nav="1">1. Participant</button>
+        <button type="button" data-step-nav="2">2. Events</button>
+        <button type="button" data-step-nav="3">3. Members</button>
+        <button type="button" data-step-nav="4">4. Review</button>
       </div>
-      <label class="reg-field">
-        <span>Upload Payment Screenshot</span>
-        <input type="file" name="paymentScreenshot" accept="image/*" required>
-      </label>
-      <button type="submit" class="btn bm" id="reg-submit">Submit Registration</button>
-      <p id="reg-status" class="reg-status" aria-live="polite"></p>
-    </form>
-    <div style="display:flex; flex-direction:column; align-items:center; gap:1.2rem; margin-top:1.5rem">
-      <a href="https://chat.whatsapp.com/Hbq74sCWK0W3TTt8L43u6s?mode=gi_t" target="_blank" rel="noopener noreferrer" class="btn bo" style="border-color:var(--warm); color:#ffffff; background:linear-gradient(135deg,var(--g1),var(--warm)); box-shadow:0 12px 32px rgba(var(--warm-rgb),0.45); display:flex; align-items:center; gap:0.6rem">
-        <i class="ph ph-whatsapp-logo" style="font-size:1.2rem"></i> JOIN WHATSAPP
-      </a>
+      <form id="reg-form" class="reg-form" novalidate>
+        <section class="reg-step" data-step="1">
+          <div class="reg-step-head">
+            <h4>Participant details</h4>
+            <p>Save the main participant details locally before moving on.</p>
+          </div>
+          <div class="reg-grid">
+            <label class="reg-field">
+              <span>Name</span>
+              <input type="text" name="name" autocomplete="name" required>
+            </label>
+            <label class="reg-field">
+              <span>Email</span>
+              <input type="email" name="email" autocomplete="email" required>
+            </label>
+            <label class="reg-field">
+              <span>Whatsapp Number</span>
+              <input type="tel" name="whatsapp" autocomplete="tel" required>
+            </label>
+            <label class="reg-field">
+              <span>Year</span>
+              <select name="year" required>
+                <option value="">Select Year</option>
+                <option value="I-Year">I-Year</option>
+                <option value="II-Year">II-Year</option>
+                <option value="III-Year">III-Year</option>
+                <option value="IV-Year">IV-Year</option>
+              </select>
+            </label>
+            <label class="reg-field">
+              <span>College Name</span>
+              <input type="text" name="collegeName" required>
+            </label>
+            <label class="reg-field">
+              <span>Department Name</span>
+              <input type="text" name="departmentName" required>
+            </label>
+            <label class="reg-field">
+              <span>Food Preference</span>
+              <select name="food" required>
+                <option value="">Select Food Preference</option>
+                <option value="Veg">Vegetarian</option>
+                <option value="Non-Veg">Non-Vegetarian</option>
+              </select>
+            </label>
+          </div>
+          <div class="reg-nav-actions">
+            <button type="button" class="btn bm" id="reg-step1-continue">Continue</button>
+          </div>
+        </section>
+
+        <section class="reg-step hidden" data-step="2">
+          <div class="reg-step-head">
+            <h4>Event selection</h4>
+            <p>Select one technical and one non-technical event. The wizard will only show the member builder if a team event is chosen.</p>
+          </div>
+          <div class="reg-columns">
+            <div class="reg-field">
+              <span>Technical Events</span>
+              <div class="reg-checklist">
+                <label class="reg-option"><input type="radio" name="technicalEvents" value="Innopitch" required><span>Innopitch</span></label>
+                <label class="reg-option"><input type="radio" name="technicalEvents" value="Devfolio"><span>Devfolio</span></label>
+                <label class="reg-option"><input type="radio" name="technicalEvents" value="Promptcraft"><span>Promptcraft</span></label>
+              </div>
+            </div>
+            <div class="reg-field">
+              <span>Non-Technical Events</span>
+              <div class="reg-checklist">
+                <label class="reg-option"><input type="radio" name="nonTechnicalEvents" value="E-Sports (Free fire)" required><span>E-Sports (Free fire)</span></label>
+                <label class="reg-option" id="ipl-form-option"><input type="radio" name="nonTechnicalEvents" value="IPL Auction"><span>IPL Auction</span><em class="slot-inline" id="ipl-slot-form">(10 slots left)</em></label>
+                <label class="reg-option"><input type="radio" name="nonTechnicalEvents" value="Visual Connect"><span>Visual Connect</span></label>
+                <label class="reg-option"><input type="radio" name="nonTechnicalEvents" value="Channel Surfing"><span>Channel Surfing</span></label>
+              </div>
+            </div>
+          </div>
+          <div class="selection-summary" id="event-summary" aria-live="polite"></div>
+          <div class="reg-nav-actions">
+            <button type="button" class="btn bo" id="reg-step2-back">Back</button>
+            <button type="button" class="btn bm" id="reg-step2-continue">Continue</button>
+          </div>
+        </section>
+
+        <section class="reg-step hidden" data-step="3">
+          <div class="reg-step-head">
+            <h4>Team members</h4>
+            <p>Add teammates locally. Their temporary IDs, contact details, and event flags remain in session storage until final submission.</p>
+          </div>
+          <div class="member-builder">
+            <div class="member-builder-head">
+              <div>
+                <span class="reg-kicker">Team pool</span>
+                <h4>Added members</h4>
+              </div>
+              <button type="button" class="btn bo member-add-btn" id="member-add-btn">Add Member</button>
+            </div>
+            <div class="team-note" id="team-note"></div>
+            <div id="member-list" class="member-list"></div>
+            <div class="member-editor hidden" id="member-editor">
+              <div class="member-editor-head">
+                <h5 id="member-editor-title">Add Member</h5>
+                <p id="member-editor-hint">Fill in the teammate details and assign the allowed event categories.</p>
+              </div>
+              <div class="reg-grid">
+                <label class="reg-field">
+                  <span>Member Name</span>
+                  <input type="text" id="member-name" autocomplete="name">
+                </label>
+                <label class="reg-field">
+                  <span>Member Email</span>
+                  <input type="email" id="member-email" autocomplete="email">
+                </label>
+                <label class="reg-field">
+                  <span>Member Phone</span>
+                  <input type="tel" id="member-phone" autocomplete="tel">
+                </label>
+                <label class="reg-field">
+                  <span>Member ID</span>
+                  <input type="text" id="member-id" readonly>
+                </label>
+                <label class="reg-field">
+                  <span>Food Preference</span>
+                  <select id="member-food">
+                    <option value="">Select Food Preference</option>
+                    <option value="Veg">Vegetarian</option>
+                    <option value="Non-Veg">Non-Vegetarian</option>
+                  </select>
+                </label>
+              </div>
+              <div id="member-event-fields" class="member-event-fields"></div>
+              <div class="reg-nav-actions">
+                <button type="button" class="btn bo" id="member-cancel-btn">Cancel</button>
+                <button type="button" class="btn bm" id="member-save-btn">Save Member</button>
+              </div>
+            </div>
+          </div>
+          <div class="reg-nav-actions">
+            <button type="button" class="btn bo" id="reg-step3-back">Back</button>
+            <button type="button" class="btn bm" id="reg-step3-continue">Continue</button>
+          </div>
+        </section>
+
+        <section class="reg-step hidden" data-step="4">
+          <div class="reg-step-head">
+            <h4>Review and submit</h4>
+            <p>Confirm the local session summary, upload the payment screenshot, and submit everything in one request.</p>
+          </div>
+          <div id="final-review" class="final-review"></div>
+          <div class="reg-field" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:1rem">
+            <span style="display:block; margin-bottom:0.5rem; font-weight:700">Payment Details</span>
+            <p style="margin:0.3rem 0; opacity:0.92">Payment per head - Rs.150</p>
+            <p id="payment-total" style="margin:0.3rem 0; opacity:0.92; font-weight:700">Total amount - Rs.150</p>
+            <p style="margin:0.3rem 0 0.8rem; opacity:0.92">UPI ID - <span id="upi-id-text">sachinvelu6925@okaxis</span></p>
+            <img id="payment-qr" src="Payment_QR.jpeg" alt="Payment QR" style="width:220px; max-width:100%; height:auto; border-radius:10px; border:1px solid var(--border); display:block">
+          </div>
+          <label class="reg-field">
+            <span>Upload Payment Screenshot</span>
+            <input type="file" name="paymentScreenshot" accept="image/*" required>
+          </label>
+          <div class="reg-nav-actions">
+            <button type="button" class="btn bo" id="reg-step4-back">Back</button>
+            <button type="submit" class="btn bm" id="reg-submit">Submit Registration</button>
+          </div>
+        </section>
+
+        <p id="reg-status" class="reg-status" aria-live="polite"></p>
+      </form>
+      <div class="reg-footer-actions">
+        <a href="https://chat.whatsapp.com/Hbq74sCWK0W3TTt8L43u6s?mode=gi_t" target="_blank" rel="noopener noreferrer" class="btn bo reg-join-btn">
+          <i class="ph ph-whatsapp-logo"></i> JOIN WHATSAPP
+        </a>
+      </div>
     </div>
   </div>
 </section>
@@ -337,11 +447,12 @@
   <h2 class="stitle rv">Student Committee</h2>
   <p class="ssub rv">The Driving Force</p>
   <div class="tm-grid">
-    <div class="tm-card rv d1"><div class="tm-av">EV</div><p class="tm-role">Vice President</p><h3 class="tm-name">Elakiya V</h3><p class="tm-ph">+91 93441 79064</p><div class="tm-act"><a href="tel:9344179064" class="ac">Call</a><a href="https://wa.me/919344179064" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
-    <div class="tm-card rv d2"><div class="tm-av">SV</div><p class="tm-role">Secretary</p><h3 class="tm-name">Sachin V</h3><p class="tm-ph">+91 99407 64517</p><div class="tm-act"><a href="tel:9940764517" class="ac">Call</a><a href="https://wa.me/919940764517" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
-    <div class="tm-card rv d1"><div class="tm-av">GP</div><p class="tm-role">Technical Head</p><h3 class="tm-name">Gokulkumar P</h3><p class="tm-ph">+91 93631 35589</p><div class="tm-act"><a href="tel:9363135589" class="ac">Call</a><a href="https://wa.me/919363135589" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
-    <div class="tm-card rv d2"><div class="tm-av">MDK</div><p class="tm-role">Non-Tech Head &amp; Joint Secretary</p><h3 class="tm-name">M Dinesh Karthick</h3><p class="tm-ph">+91 91501 54087</p><div class="tm-act"><a href="tel:9150154087" class="ac">Call</a><a href="https://wa.me/919150154087" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
-    <div class="tm-card rv d1"><div class="tm-av">IR</div><p class="tm-role">Treasurer</p><h3 class="tm-name" style="margin-bottom: 2rem;">I. Inul Rifaya</h3></div>
+    <div class="tm-card rv d1"><div class="tm-av">DDD</div><p class="tm-role">President</p><h3 class="tm-name">Deva Dinesh D</h3><p class="tm-ph">+91 98855 87194</p><div class="tm-act"><a href="tel:9885587194" class="ac">Call</a><a href="https://wa.me/919885587194" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
+    <div class="tm-card rv d2"><div class="tm-av">EV</div><p class="tm-role">Vice President</p><h3 class="tm-name">Elakiya V</h3><p class="tm-ph">+91 93441 79064</p><div class="tm-act"><a href="tel:9344179064" class="ac">Call</a><a href="https://wa.me/919344179064" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
+    <div class="tm-card rv d1"><div class="tm-av">SV</div><p class="tm-role">Secretary</p><h3 class="tm-name">Sachin V</h3><p class="tm-ph">+91 99407 64517</p><div class="tm-act"><a href="tel:9940764517" class="ac">Call</a><a href="https://wa.me/919940764517" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
+    <div class="tm-card rv d2"><div class="tm-av">GP</div><p class="tm-role">Technical Head</p><h3 class="tm-name">Gokulkumar P</h3><p class="tm-ph">+91 93631 35589</p><div class="tm-act"><a href="tel:9363135589" class="ac">Call</a><a href="https://wa.me/919363135589" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
+    <div class="tm-card rv d1"><div class="tm-av">MDK</div><p class="tm-role">Non-Tech Head &amp; Joint Secretary</p><h3 class="tm-name">M Dinesh Karthick</h3><p class="tm-ph">+91 91501 54087</p><div class="tm-act"><a href="tel:9150154087" class="ac">Call</a><a href="https://wa.me/919150154087" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
+    <div class="tm-card rv d2"><div class="tm-av">IR</div><p class="tm-role">Treasurer</p><h3 class="tm-name">I. Inul Rifaya</h3><p class="tm-ph">+91 99433 94328</p><div class="tm-act"><a href="https://wa.me/919943394328" target="_blank" rel="noopener noreferrer" class="aw">WhatsApp</a></div></div>
   </div>
 </section>
 
@@ -367,7 +478,7 @@
       <p class="ft-sub rv">Have questions about the symposium? Our team is here to help.</p>
       <span class="ft-section-label rv">Follow Us Online</span>
       <div class="ft-soc rv">
-        <a href="https://www.instagram.com/namma_cse" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="ph ph-instagram-logo"></i></a>
+        <a href="https://www.instagram.com/pixelora_2k26" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="ph ph-instagram-logo"></i></a>
         <a href="https://youtube.com/@cse_pixelora" target="_blank" rel="noopener noreferrer" title="YouTube"><i class="ph ph-youtube-logo"></i></a>
         <a href="mailto:csepixelora@gmail.com" title="Email"><i class="ph ph-envelope-simple"></i></a>
       </div>

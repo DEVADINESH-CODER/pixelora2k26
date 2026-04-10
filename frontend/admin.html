@@ -28,8 +28,8 @@
 
     <div class="admin-controls">
       <label class="admin-secret-field">
-        <span>Admin Secret</span>
-        <input type="password" id="admin-secret" placeholder="Enter admin secret" autocomplete="off">
+        <span>Admin code</span>
+        <input type="password" id="admin-secret" placeholder="Enter your committee code" autocomplete="off">
       </label>
       <label class="admin-secret-field admin-filter-field">
         <span>View Filter</span>
@@ -53,72 +53,18 @@
       </div>
     </div>
 
+    <p id="admin-scope-hint" class="admin-scope-hint" hidden></p>
     <p id="admin-status" class="admin-status" aria-live="polite"></p>
 
-    <p class="admin-view-note">Use codes: <strong>REG</strong> (registration), <strong>TEAM</strong> (team/event details), <strong>FOOD</strong> (food preference details)</p>
+    <div id="admin-event-stats" class="admin-event-stats" hidden></div>
 
-    <section class="admin-view active" id="admin-view-registration">
-      <h3>Registration View</h3>
-      <div class="admin-table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Leader</th>
-              <th>Technical Event</th>
-              <th>Non-Technical Event</th>
-              <th>Members (with food)</th>
-              <th>Payment</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody id="admin-registration-body">
-            <tr><td class="admin-empty" colspan="6">Enter admin secret and click Unlock.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="admin-view" id="admin-view-team">
-      <h3>Team View</h3>
-      <div class="admin-table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Event</th>
-              <th>Leader</th>
-              <th>Members</th>
-              <th>Total Count</th>
-            </tr>
-          </thead>
-          <tbody id="admin-team-body">
-            <tr><td class="admin-empty" colspan="5">No team data loaded yet.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="admin-view" id="admin-view-food">
-      <h3>Food View</h3>
-      <div id="admin-food-summary" class="admin-food-summary"></div>
-      <div class="admin-table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Role</th>
-              <th>Technical</th>
-              <th>Non-Technical</th>
-              <th>Food</th>
-              <th>Leader</th>
-            </tr>
-          </thead>
-          <tbody id="admin-food-body">
-            <tr><td class="admin-empty" colspan="6">No food data loaded yet.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="admin-main-table">
+        <thead id="admin-table-head"></thead>
+        <tbody id="admin-table-body">
+          <tr><td class="admin-empty" colspan="8">Enter admin code and click Unlock.</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
 </main>

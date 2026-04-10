@@ -78,8 +78,9 @@ let iplStatusPollHandle = null;
 
 const APP_CONFIG = window.__PIXELORA_CONFIG__ || {};
 const configuredApiBaseUrl = String(APP_CONFIG.apiBaseUrl || '').trim().replace(/\/+$/, '');
-const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isLocalHost ? '' : configuredApiBaseUrl;
+// When apiBaseUrl is set in config.js, always use it (including local frontend dev → cloud API).
+// Leave apiBaseUrl empty only for same-origin requests (e.g. FastAPI serving this folder on one port).
+const API_BASE_URL = configuredApiBaseUrl;
 const ADMIN_SHORTCUT_AUTH_KEY = 'pixelora-admin-shortcut-auth';
 
 function buildApiUrl(path) {
@@ -96,13 +97,22 @@ async function verifyAdminSecret(secret) {
   });
 
   if (!response.ok) {
-    throw new Error('Invalid admin secret.');
+    const data = await response.json().catch(() => ({}));
+    const detail = typeof data.detail === 'string' ? data.detail : '';
+    const hint =
+      ' Committee codes (food / tech / non-tech) must be set on the same server as the API (e.g. Render Environment), not only in a local .env file.';
+    throw new Error(
+      detail || `Invalid admin secret (${response.status}).${hint}`
+    );
   }
 }
 
 async function openAdminPageWithSecretCheck() {
   const defaultSecret = getStoredAdminSecret();
-  const enteredSecret = window.prompt('Enter admin secret to open admin page:', defaultSecret);
+  const enteredSecret = window.prompt(
+    'Enter admin code (main or committee code). The API is loaded from config (e.g. Render).',
+    defaultSecret
+  );
   if (enteredSecret === null) return;
 
   const secret = enteredSecret.trim();
@@ -116,8 +126,8 @@ async function openAdminPageWithSecretCheck() {
     localStorage.setItem('pixelora-admin-secret', secret);
     sessionStorage.setItem(ADMIN_SHORTCUT_AUTH_KEY, String(Date.now()));
     window.location.href = 'admin.html';
-  } catch (_error) {
-    window.alert('Invalid admin secret. Access denied.');
+  } catch (error) {
+    window.alert(error.message || 'Invalid admin secret. Access denied.');
   }
 }
 
@@ -142,15 +152,29 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function formatAdminTeam(team) {
-  if (!team) return '<span>None</span>';
+function formatFoodByPersonInline(team) {
+  const pf = team?.participantFoods;
+  if (!Array.isArray(pf) || !pf.length) return '—';
+  return pf.map((p) => `${escapeHtml(p.name)}: ${escapeHtml(p.food)}`).join('<br>');
+}
+
+function formatAdminTeam(team, eventName) {
+  if (!team) return '<span>—</span>';
+  const pf = team.participantFoods;
+  const isSoloTech =
+    Array.isArray(pf) && pf.length === 1 && (!(team.members || []).length || (team.members || []).length === 0);
+  if (isSoloTech && eventName) {
+    return `<div class="admin-team"><span class="admin-evtag">${escapeHtml(eventName)}</span><span>Individual</span><div>${formatFoodByPersonInline(team)}</div></div>`;
+  }
+  if (!team.teamName && !team.teamLeader && !(team.members || []).length) return '<span>—</span>';
   const members = Array.isArray(team.members) ? team.members.join(', ') : '';
   return `
     <div class="admin-team">
+      ${eventName ? `<span class="admin-evtag">${escapeHtml(eventName)}</span>` : ''}
       <strong>${escapeHtml(team.teamName || '—')}</strong>
       <span>Leader: ${escapeHtml(team.teamLeader || '—')}</span>
-      <span>Size: ${escapeHtml(team.teamSize || '—')}</span>
       <span>Members: ${escapeHtml(members || '—')}</span>
+      <div style="margin-top:.35rem;font-size:.78rem"><strong>Food:</strong> ${formatFoodByPersonInline(team)}</div>
     </div>
   `;
 }
@@ -171,8 +195,8 @@ function renderAdminRegistrations(registrations) {
         <span style="opacity:.7">${escapeHtml(registration.whatsapp)}</span>
       </td>
       <td>${escapeHtml(registration.year)}</td>
-      <td>${formatAdminTeam(registration.technicalTeam)}</td>
-      <td>${formatAdminTeam(registration.nonTechnicalTeam)}</td>
+      <td>${formatAdminTeam(registration.technicalTeam, registration.technicalEvents)}</td>
+      <td>${formatAdminTeam(registration.nonTechnicalTeam, registration.nonTechnicalEvents)}</td>
       <td>${escapeHtml(registration.food)}</td>
       <td>${escapeHtml(registration.createdAt)}</td>
     </tr>
@@ -534,19 +558,21 @@ function getTeamRule(eventName) {
   return TEAM_RULES[eventName] || { min: 1, max: 1 };
 }
 
-function createEmptyRegistrationState() {
-  return {
-    version: 1,
-    step: 1,
-    nextMemberIndex: 2,
-    mainUser: blankMainUser(),
-    registrationTrack: 'both',
-    selectedEvents: { technical: '', nonTechnical: '' },
-    teamMembers: [],
-    draftMember: null,
-    updatedAt: ''
-  };
+function foodSelectMarkup(label, fieldName) {
+  return `
+    <label class="reg-field">
+      <span>${label}</span>
+      <select name="${fieldName}" required>
+        <option value="">Select food</option>
+        <option value="Non-Veg">Non-Veg</option>
+        <option value="Veg">Veg</option>
+      </select>
+    </label>
+  `;
 }
+
+function createTeamDetailsMarkup(groupName, selectedEvent, selectedSize) {
+  if (!selectedEvent) return '';
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -599,14 +625,15 @@ function normalizeRegistrationState(rawState) {
   state.nextMemberIndex = Math.max(Number(state.nextMemberIndex || 0), maxMemberNumber + 1, state.mainUser.memberId ? 2 : 1);
   state.nextMemberIndex = Math.max(state.nextMemberIndex, 2);
 
-  return state;
-}
-
-function loadRegistrationState() {
-  try {
-    return normalizeRegistrationState(JSON.parse(localStorage.getItem(REG_SESSION_STORAGE_KEY) || 'null'));
-  } catch (_error) {
-    return createEmptyRegistrationState();
+  let memberRows = '';
+  for (let idx = 1; idx <= memberCount; idx += 1) {
+    memberRows += `
+      <label class="reg-field">
+        <span>Team Member ${idx} Name</span>
+        <input type="text" name="${safeGroup}TeamMember${idx}" required>
+      </label>
+      ${foodSelectMarkup(`Team Member ${idx} Food`, `${safeGroup}MemberFood${idx}`)}
+    `;
   }
 }
 
@@ -733,56 +760,31 @@ function renderEventSummary() {
         <p>${nonTechnicalRequirement.totalMin > 1 ? `Team required: ${nonTechnicalRequirement.requiredMembers} member${nonTechnicalRequirement.requiredMembers === 1 ? '' : 's'} besides you.` : 'As per rules.'}</p>
       </div>
     </div>
-  `;
-
-  const lines = [];
-  if (technicalRequirement.eventName) {
-    lines.push(`<strong>${escapeHtml(technicalRequirement.eventName)}</strong>: ${technicalRequirement.assignedMembers.length}/${technicalRequirement.requiredMembers} teammate${technicalRequirement.requiredMembers === 1 ? '' : 's'} added.`);
-  }
-  if (nonTechnicalRequirement.eventName) {
-    lines.push(`<strong>${escapeHtml(nonTechnicalRequirement.eventName)}</strong>: ${nonTechnicalRequirement.assignedMembers.length}/${nonTechnicalRequirement.requiredMembers} teammate${nonTechnicalRequirement.requiredMembers === 1 ? '' : 's'} added.`);
-  }
-
-  registrationDom.teamNote.innerHTML = lines.length
-    ? lines.join('<br>')
-    : (needsMemberStep ? 'Add members if your chosen events need a team.' : 'You can continue directly to review.');
-}
-
-function renderMemberEventFields(memberDraft) {
-  if (!registrationDom.memberEventFields) return;
-
-  const selectedTechnicalEvent = getSelectedEvent('technical');
-  const selectedNonTechnicalEvent = getSelectedEvent('nontechnical');
-  const technicalOptions = getCategoryEventOptions('technical').map((eventOption) => {
-    const selectedHint = selectedTechnicalEvent && selectedTechnicalEvent === eventOption.value ? ' (Main selected)' : '';
-    return `<option value="${escapeHtml(eventOption.value)}" ${memberDraft.technicalEvent === eventOption.value ? 'selected' : ''}>${escapeHtml(eventOption.label)}${selectedHint}</option>`;
-  }).join('');
-
-  const nonTechnicalOptions = getCategoryEventOptions('nontechnical').map((eventOption) => {
-    const selectedHint = selectedNonTechnicalEvent && selectedNonTechnicalEvent === eventOption.value ? ' (Main selected)' : '';
-    return `<option value="${escapeHtml(eventOption.value)}" ${memberDraft.nonTechnicalEvent === eventOption.value ? 'selected' : ''}>${escapeHtml(eventOption.label)}${selectedHint}</option>`;
-  }).join('');
-
-  registrationDom.memberEventFields.innerHTML = `
-    <div class="member-event-group">
-      <h6>Technical Event (Optional)</h6>
-      <div class="reg-field">
-        <span>Member can choose one technical event independently</span>
-        <select id="member-technical-event" name="memberTechnicalEvent">
-          <option value="">No technical event</option>
-          ${technicalOptions}
-        </select>
-      </div>
-    </div>
-    <div class="member-event-group">
-      <h6>Non-Technical Event (Optional)</h6>
-      <div class="reg-field">
-        <span>Member can choose one non-technical event independently</span>
-        <select id="member-nontechnical-event" name="memberNonTechnicalEvent">
-          <option value="">No non-technical event</option>
-          ${nonTechnicalOptions}
-        </select>
-      </div>
+    <label class="reg-field">
+      <span>Team Name</span>
+      <input type="text" name="${safeGroup}TeamName" required>
+    </label>
+    <label class="reg-field">
+      <span>Team Leader Name</span>
+      <input type="text" name="${safeGroup}TeamLeader" required>
+    </label>
+    ${foodSelectMarkup('Team Leader Food', `${safeGroup}LeaderFood`)}
+    ${
+      rule.min !== rule.max
+        ? `<label class="reg-field">
+            <span>Team Size</span>
+            <select name="${safeGroup}TeamSize" required>
+              ${Array.from({ length: rule.max - rule.min + 1 }, (_, i) => {
+                const size = rule.min + i;
+                const selected = size === teamSize ? 'selected' : '';
+                return `<option value="${size}" ${selected}>${size} members</option>`;
+              }).join('')}
+            </select>
+          </label>`
+        : `<input type="hidden" name="${safeGroup}TeamSize" value="${teamSize}">`
+    }
+    <div class="team-members team-member-row">
+      ${memberRows}
     </div>
   `;
 
@@ -896,21 +898,16 @@ function updateMainUserInputs() {
     input.checked = registrationState.selectedEvents.technical === input.value;
   });
 
-  registrationInputs.nonTechnicalEvents.forEach((input) => {
-    input.checked = registrationState.selectedEvents.nonTechnical === input.value;
-  });
-
-  registrationInputs.registrationTrack.forEach((input) => {
-    input.checked = getSelectedTrack() === String(input.value || '').toLowerCase();
-  });
-}
-
-function applyTrackSelectionUI() {
-  const allowTechnical = isTrackEnabled('technical');
-  const allowNonTechnical = isTrackEnabled('nontechnical');
-
-  if (registrationDom.technicalEventsGroup) {
-    registrationDom.technicalEventsGroup.classList.toggle('hidden', !allowTechnical);
+  if (isTechnical && TECHNICAL_EVENTS_WITHOUT_TEAM_DETAILS.has(selectedEvent)) {
+    container.classList.remove('empty');
+    container.innerHTML = `
+      <div class="team-head">
+        <span class="team-title">${selectedEvent}</span>
+        <span class="team-hint">Individual participant — food preference</span>
+      </div>
+      ${foodSelectMarkup('Food preference (participant)', 'technicalSoloFood')}
+    `;
+    return;
   }
 
   if (registrationDom.nonTechnicalEventsGroup) {
@@ -1153,8 +1150,22 @@ function validateEventStep() {
     return 'Please select at least one event.';
   }
 
-  if (registrationState.selectedEvents.nonTechnical === 'IPL Auction' && getIplSlotsLeft() <= 0) {
-    return 'IPL Auction slots are full. Please choose another non-technical event.';
+  if (groupName === 'technical' && TECHNICAL_EVENTS_WITHOUT_TEAM_DETAILS.has(selectedEvent)) {
+    const soloName = String(formData.get('name') || '').trim();
+    const soloFood = String(formData.get('technicalSoloFood') || '').trim();
+    if (!soloFood) {
+      return { ok: false, error: 'Please select food preference for the technical event.' };
+    }
+    return {
+      ok: true,
+      data: {
+        teamName: '',
+        teamLeader: soloName,
+        teamSize: 1,
+        members: [],
+        participantFoods: [{ name: soloName, role: 'solo', food: soloFood }]
+      }
+    };
   }
 
   return '';
@@ -1177,45 +1188,36 @@ function validateMemberDraft(memberDraft) {
     return 'Member non-technical event is not valid.';
   }
 
-  return '';
-}
-
-function validateMemberConflicts(memberDraft) {
-  const currentEmail = String(memberDraft.email || '').trim().toLowerCase();
-  const currentPhone = normalizeComparablePhone(memberDraft.phone);
-
-  const duplicate = registrationState.teamMembers.find((member) => {
-    if (member.memberId === memberDraft.memberId) return false;
-    const emailMatches = String(member.email || '').trim().toLowerCase() === currentEmail && currentEmail;
-    const phoneMatches = normalizeComparablePhone(member.phone) === currentPhone && currentPhone;
-    return emailMatches || phoneMatches;
-  });
-
-  if (duplicate) {
-    return 'This member already exists in the session. Use a different email or phone number.';
+  const leaderFood = String(formData.get(`${groupName}LeaderFood`) || '').trim();
+  if (!leaderFood) {
+    return { ok: false, error: `Please select team leader food (${label} event).` };
   }
 
-  const mainEmail = String(registrationState.mainUser.email || '').trim().toLowerCase();
-  const mainPhone = normalizeComparablePhone(registrationState.mainUser.whatsapp);
-  if (mainEmail && mainEmail === currentEmail) return 'The member email cannot match the main participant email.';
-  if (mainPhone && mainPhone === currentPhone) return 'The member phone cannot match the main participant phone.';
+  const members = [];
+  const participantFoods = [{ name: teamLeader, role: 'leader', food: leaderFood }];
 
-  return '';
-}
-
-function validateTeamRequirements() {
-  const technicalRequirement = getTeamRequirement('technical');
-  const nonTechnicalRequirement = getTeamRequirement('nontechnical');
-
-  if (technicalRequirement.eventName && isTeamEvent(technicalRequirement.eventName)) {
-    if (technicalRequirement.assignedMembers.length < technicalRequirement.requiredMembers) {
-      return `${technicalRequirement.eventName} needs ${technicalRequirement.requiredMembers} member${technicalRequirement.requiredMembers === 1 ? '' : 's'} besides you.`;
+  for (let idx = 1; idx <= Math.max(0, teamSize - 1); idx += 1) {
+    const memberName = String(formData.get(`${groupName}TeamMember${idx}`) || '').trim();
+    const memberFood = String(formData.get(`${groupName}MemberFood${idx}`) || '').trim();
+    if (!memberName) {
+      return { ok: false, error: `Please fill ${label} team member ${idx} name.` };
     }
+    if (!memberFood) {
+      return { ok: false, error: `Please select food for ${label} team member ${idx}.` };
+    }
+    members.push(memberName);
+    participantFoods.push({ name: memberName, role: 'member', food: memberFood });
   }
 
-  if (nonTechnicalRequirement.eventName && isTeamEvent(nonTechnicalRequirement.eventName)) {
-    if (nonTechnicalRequirement.assignedMembers.length < nonTechnicalRequirement.requiredMembers) {
-      return `${nonTechnicalRequirement.eventName} needs ${nonTechnicalRequirement.requiredMembers} member${nonTechnicalRequirement.requiredMembers === 1 ? '' : 's'} besides you.`;
+  return {
+    ok: true,
+    data: {
+      event: selectedEvent,
+      teamName,
+      teamLeader,
+      teamSize,
+      members,
+      participantFoods
     }
   }
 
@@ -1468,55 +1470,21 @@ function updateIplSlotSelectionState() {
   }
 }
 
-function updateRegistrationDomFromState() {
-  updateMainUserInputs();
-  updateRegistrationIdChip();
-  applyTrackSelectionUI();
-  updateIplSlotSelectionState();
-  renderRegistrationWizard();
-}
+    const formData = new FormData(regForm);
+    const paymentScreenshot = formData.get('paymentScreenshot');
 
-function handleMemberInputEvents() {
-  if (registrationDom.memberName) {
-    registrationDom.memberName.addEventListener('input', () => {
-      syncDraftMemberFromInputs();
-      renderMemberEditor();
-    });
-  }
-  if (registrationDom.memberEmail) {
-    registrationDom.memberEmail.addEventListener('input', () => {
-      syncDraftMemberFromInputs();
-      renderMemberEditor();
-    });
-  }
-  if (registrationDom.memberPhone) {
-    registrationDom.memberPhone.addEventListener('input', () => {
-      syncDraftMemberFromInputs();
-      renderMemberEditor();
-    });
-  }
-  if (registrationDom.memberFood) {
-    registrationDom.memberFood.addEventListener('change', () => {
-      syncDraftMemberFromInputs();
-      renderMemberEditor();
-    });
-  }
-}
+    const required = {
+      name: String(formData.get('name') || '').trim(),
+      email: String(formData.get('email') || '').trim(),
+      whatsapp: String(formData.get('whatsapp') || '').trim(),
+      year: String(formData.get('year') || '').trim(),
+      collegeName: String(formData.get('collegeName') || '').trim(),
+      departmentName: String(formData.get('departmentName') || '').trim()
+    };
 
-function bindRegistrationEvents() {
-  if (!regForm) return;
-
-  ['name', 'email', 'whatsapp', 'year', 'collegeName', 'departmentName', 'food'].forEach((fieldName) => {
-    const input = registrationInputs[fieldName];
-    if (input) {
-      input.addEventListener('input', () => {
-        syncMainUserFromForm();
-        renderRegistrationWizard();
-      });
-      input.addEventListener('change', () => {
-        syncMainUserFromForm();
-        renderRegistrationWizard();
-      });
+    if (Object.values(required).some((value) => !value)) {
+      setRegStatus('Please fill all required fields.', 'err');
+      return;
     }
   });
 
@@ -1615,7 +1583,24 @@ function bindRegistrationEvents() {
       return;
     }
 
-    const paymentScreenshot = registrationInputs.paymentScreenshot?.files?.[0];
+    formData.set('technicalTeamName', technicalTeam.data.teamName);
+    formData.set('technicalTeamLeader', technicalTeam.data.teamLeader);
+    formData.set('technicalTeamSize', String(technicalTeam.data.teamSize));
+    formData.set('technicalTeamMembers', JSON.stringify(technicalTeam.data.members));
+    formData.set(
+      'technicalParticipantFoods',
+      JSON.stringify(technicalTeam.data.participantFoods || [])
+    );
+
+    formData.set('nonTechnicalTeamName', nonTechnicalTeam.data.teamName);
+    formData.set('nonTechnicalTeamLeader', nonTechnicalTeam.data.teamLeader);
+    formData.set('nonTechnicalTeamSize', String(nonTechnicalTeam.data.teamSize));
+    formData.set('nonTechnicalTeamMembers', JSON.stringify(nonTechnicalTeam.data.members));
+    formData.set(
+      'nonTechnicalParticipantFoods',
+      JSON.stringify(nonTechnicalTeam.data.participantFoods || [])
+    );
+
     if (!(paymentScreenshot instanceof File) || !paymentScreenshot.name) {
       setRegStatus('Please upload your payment screenshot.', 'err');
       goToStep(4);

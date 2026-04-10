@@ -7,30 +7,25 @@ const adminViewFilter = document.getElementById('admin-view-filter');
 const adminPageCode = document.getElementById('admin-page-code');
 const adminOpenView = document.getElementById('admin-open-view');
 const adminStatus = document.getElementById('admin-status');
-const adminRegistrationBody = document.getElementById('admin-registration-body');
-const adminTeamBody = document.getElementById('admin-team-body');
-const adminFoodBody = document.getElementById('admin-food-body');
-const adminFoodSummary = document.getElementById('admin-food-summary');
-const adminViews = {
-  registration: document.getElementById('admin-view-registration'),
-  team: document.getElementById('admin-view-team'),
-  food: document.getElementById('admin-view-food')
-};
+const adminTableBody = document.getElementById('admin-table-body');
+const adminTableHead = document.getElementById('admin-table-head');
+const adminScopeHint = document.getElementById('admin-scope-hint');
+const adminEventStats = document.getElementById('admin-event-stats');
 
 const APP_CONFIG = window.__PIXELORA_CONFIG__ || {};
 const configuredApiBaseUrl = String(APP_CONFIG.apiBaseUrl || '').trim().replace(/\/+$/, '');
-const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isLocalHost ? '' : configuredApiBaseUrl;
+const API_BASE_URL = configuredApiBaseUrl;
 const ADMIN_SHORTCUT_AUTH_KEY = 'pixelora-admin-shortcut-auth';
 
 let unlockedSecret = '';
-let cachedRegistrations = [];
-let activeAdminView = 'registration';
+let currentAdminScope = 'full';
 
-const ADMIN_PAGE_CODES = {
-  registration: ['REG', 'REGISTRATION', 'R'],
-  team: ['TEAM', 'T'],
-  food: ['FOOD', 'F']
+const SCOPE_LABELS = {
+  full: 'Full access — all columns, export, and delete (main secret only).',
+  technical: 'Technical committee — registrant contact, technical event, team, per-person food for technical participants, payment proof.',
+  nontechnical:
+    'Non-technical committee — registrant contact, non-technical event, team, per-person food for those participants, payment proof.',
+  food: 'Food & hospitality — names, both events, per-person meal preferences (Veg / Non-Veg); payment links hidden.',
 };
 
 function buildApiUrl(path) {
@@ -53,193 +48,236 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function formatAdminTeam(team) {
-  if (!team) return '<span>None</span>';
+function formatFoodByPerson(team) {
+  const pf = team?.participantFoods;
+  if (!Array.isArray(pf) || !pf.length) return '<span class="admin-muted">—</span>';
+  return `<ul class="admin-food-list">${pf
+    .map(
+      (p) =>
+        `<li><span class="admin-food-name">${escapeHtml(p.name || '')}</span> — <strong>${escapeHtml(p.food || '')}</strong></li>`
+    )
+    .join('')}</ul>`;
+}
+
+function formatAdminTeam(team, eventName) {
+  if (!team) return '<span class="admin-muted">—</span>';
+  const pf = team.participantFoods;
+  const isSoloTech =
+    Array.isArray(pf) &&
+    pf.length === 1 &&
+    (!(team.members || []).length || (team.members || []).length === 0);
+  if (isSoloTech && eventName) {
+    return `
+        <div class="admin-team">
+          <span class="admin-evtag">${escapeHtml(eventName)}</span>
+          <span>Individual — ${escapeHtml(pf[0]?.name || team.teamLeader || '')}</span>
+          ${formatFoodByPerson(team)}
+        </div>`;
+  }
+  if (!team.teamName && !team.teamLeader && !(team.members || []).length) {
+    return '<span class="admin-muted">—</span>';
+  }
   const members = Array.isArray(team.members) ? team.members.join(', ') : '';
   return `
     <div class="admin-team">
+      ${eventName ? `<span class="admin-evtag">${escapeHtml(eventName)}</span>` : ''}
       <strong>${escapeHtml(team.teamName || '—')}</strong>
       <span>Leader: ${escapeHtml(team.teamLeader || '—')}</span>
       <span>Size: ${escapeHtml(team.teamSize || '—')}</span>
       <span>Members: ${escapeHtml(members || '—')}</span>
+      <div class="admin-food-wrap"><span class="admin-subh">Food by person</span>${formatFoodByPerson(team)}</div>
     </div>
   `;
 }
 
-function normalizeMemberRecord(member) {
-  if (!member || typeof member !== 'object') {
-    return {
-      memberId: '',
-      name: '',
-      email: '',
-      phone: '',
-      food: '',
-      technicalEvent: '',
-      nonTechnicalEvent: ''
-    };
+function renderEventStats(registrations) {
+  if (!adminEventStats) return;
+  if (!registrations.length) {
+    adminEventStats.hidden = true;
+    adminEventStats.innerHTML = '';
+    return;
   }
-
-  return {
-    memberId: String(member.memberId || '').trim(),
-    name: String(member.name || '').trim(),
-    email: String(member.email || '').trim(),
-    phone: String(member.phone || '').trim(),
-    food: String(member.food || '').trim(),
-    technicalEvent: String(member.technicalEvent || '').trim(),
-    nonTechnicalEvent: String(member.nonTechnicalEvent || '').trim()
-  };
+  const tech = {};
+  const nontech = {};
+  for (const r of registrations) {
+    const te = r.technicalEvents || '—';
+    tech[te] = (tech[te] || 0) + 1;
+    const ne = r.nonTechnicalEvents || '—';
+    nontech[ne] = (nontech[ne] || 0) + 1;
+  }
+  const chip = (label, obj) =>
+    `<div class="admin-stat-block"><h4>${label}</h4><div class="admin-stat-chips">${Object.entries(obj)
+      .map(([k, v]) => `<span class="admin-chip">${escapeHtml(k)}: <strong>${v}</strong></span>`)
+      .join('')}</div></div>`;
+  adminEventStats.innerHTML = `${chip('Technical events (registrations)', tech)}${chip(
+    'Non-technical events (registrations)',
+    nontech
+  )}`;
+  adminEventStats.hidden = false;
 }
 
-function getTeamMembers(registration) {
-  if (!Array.isArray(registration?.teamMembers)) return [];
-  return registration.teamMembers.map(normalizeMemberRecord).filter((member) => member.name || member.email || member.phone);
+function applyScopeUi(scope) {
+  currentAdminScope = scope || 'full';
+  if (adminScopeHint) {
+    adminScopeHint.textContent = SCOPE_LABELS[currentAdminScope] || '';
+    adminScopeHint.hidden = !SCOPE_LABELS[currentAdminScope];
+  }
+  if (adminReset) {
+    adminReset.style.display = currentAdminScope === 'full' ? '' : 'none';
+  }
 }
 
-function getParticipants(registration) {
-  const leader = {
-    name: String(registration?.name || '').trim(),
-    role: 'Leader',
-    technicalEvent: String(registration?.technicalEvents || '').trim(),
-    nonTechnicalEvent: String(registration?.nonTechnicalEvents || '').trim(),
-    food: String(registration?.food || '').trim(),
-    leaderName: String(registration?.name || '').trim()
-  };
-
-  const members = getTeamMembers(registration).map((member) => ({
-    name: member.name || member.memberId || 'Member',
-    role: 'Member',
-    technicalEvent: member.technicalEvent,
-    nonTechnicalEvent: member.nonTechnicalEvent,
-    food: member.food,
-    leaderName: String(registration?.name || '').trim()
-  }));
-
-  return [leader, ...members];
+function tableColspan() {
+  if (currentAdminScope === 'food') return 6;
+  if (currentAdminScope === 'technical' || currentAdminScope === 'nontechnical') return 6;
+  return 7;
 }
 
-function filterRegistrationsByView(registrations) {
-  const filter = String(adminViewFilter?.value || 'all').toLowerCase();
-  if (filter === 'all') return registrations;
+function renderAdminRegistrations(registrations, scope) {
+  if (!adminTableBody) return;
+  applyScopeUi(scope || 'full');
 
-  return registrations.filter((registration) => {
-    const hasTechnical = Boolean(String(registration?.technicalEvents || '').trim());
-    const hasNonTechnical = Boolean(String(registration?.nonTechnicalEvents || '').trim());
+  const sc = currentAdminScope;
 
-    if (filter === 'technical') return hasTechnical;
-    if (filter === 'nontechnical') return hasNonTechnical;
-    if (filter === 'both') return hasTechnical && hasNonTechnical;
-    return true;
-  });
-}
-
-function renderRegistrationView(registrations) {
-  if (!adminRegistrationBody) return;
+  if (adminEventStats) {
+    if (sc === 'full' || sc === 'technical' || sc === 'nontechnical') {
+      renderEventStats(registrations);
+    } else {
+      adminEventStats.hidden = true;
+      adminEventStats.innerHTML = '';
+    }
+  }
 
   if (!registrations.length) {
-    adminRegistrationBody.innerHTML = '<tr><td class="admin-empty" colspan="6">No registrations found.</td></tr>';
+    if (adminTableHead) adminTableHead.innerHTML = '';
+    adminTableBody.innerHTML = `<tr><td class="admin-empty" colspan="${tableColspan()}">No registrations found.</td></tr>`;
     return;
   }
 
-  adminRegistrationBody.innerHTML = registrations.map((registration) => {
-    const members = getTeamMembers(registration);
-    const memberLines = members.length
-      ? members.map((member) => `${member.name || 'Member'} (${member.food || 'N/A'})`).join(', ')
-      : 'No members added';
-
-    return `
-    <tr>
-      <td>
-        <strong>${escapeHtml(registration.name)}</strong><br>
-        <span style="opacity:.7">${escapeHtml(registration.email)}</span><br>
-        <span style="opacity:.7">${escapeHtml(registration.whatsapp)}</span><br>
-        <span style="opacity:.85">Food: ${escapeHtml(registration.food || 'N/A')}</span>
-      </td>
-      <td>${escapeHtml(registration.technicalEvents || '—')}</td>
-      <td>${escapeHtml(registration.nonTechnicalEvents || '—')}</td>
-      <td>${escapeHtml(memberLines)}</td>
-      <td>${renderPaymentScreenshotCell(registration.paymentScreenshot)}</td>
-      <td>${escapeHtml(registration.createdAt)}</td>
-    </tr>
-  `;
-  }).join('');
-}
-
-function renderTeamView(registrations) {
-  if (!adminTeamBody) return;
-
-  const rows = [];
-  registrations.forEach((registration) => {
-    const members = getTeamMembers(registration);
-
-    if (registration.technicalEvents) {
-      const technicalMembers = members.filter((member) => member.technicalEvent === registration.technicalEvents);
-      rows.push({
-        category: 'Technical',
-        event: registration.technicalEvents,
-        leader: registration.name,
-        members: technicalMembers.map((member) => `${member.name} (${member.food || 'N/A'})`).join(', ') || 'None',
-        total: 1 + technicalMembers.length
-      });
+  if (sc === 'full') {
+    if (adminTableHead) {
+      adminTableHead.innerHTML = `<tr>
+        <th>Participant</th>
+        <th>Year / College / Dept</th>
+        <th>Technical</th>
+        <th>Non-technical</th>
+        <th>Meal summary</th>
+        <th>Payment</th>
+        <th>Created</th>
+      </tr>`;
     }
+    adminTableBody.innerHTML = registrations
+      .map(
+        (registration) => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(registration.name)}</strong><br>
+          <span class="admin-muted">${escapeHtml(registration.email)}</span><br>
+          <span class="admin-muted">${escapeHtml(registration.whatsapp)}</span>
+        </td>
+        <td>
+          ${escapeHtml(registration.year)}<br>
+          <span class="admin-muted">${escapeHtml(registration.collegeName)}</span><br>
+          <span class="admin-muted">${escapeHtml(registration.departmentName)}</span>
+        </td>
+        <td>${formatAdminTeam(registration.technicalTeam, registration.technicalEvents)}</td>
+        <td>${formatAdminTeam(registration.nonTechnicalTeam, registration.nonTechnicalEvents)}</td>
+        <td class="admin-meal-sum">${escapeHtml(registration.food)}</td>
+        <td>${renderPaymentScreenshotCell(registration.paymentScreenshot)}</td>
+        <td>${escapeHtml(registration.createdAt)}</td>
+      </tr>`
+      )
+      .join('');
+    return;
+  }
 
-    if (registration.nonTechnicalEvents) {
-      const nonTechnicalMembers = members.filter((member) => member.nonTechnicalEvent === registration.nonTechnicalEvents);
-      rows.push({
-        category: 'Non-Technical',
-        event: registration.nonTechnicalEvents,
-        leader: registration.name,
-        members: nonTechnicalMembers.map((member) => `${member.name} (${member.food || 'N/A'})`).join(', ') || 'None',
-        total: 1 + nonTechnicalMembers.length
-      });
+  if (sc === 'technical') {
+    if (adminTableHead) {
+      adminTableHead.innerHTML = `<tr>
+        <th>Participant</th>
+        <th>Year / College / Dept</th>
+        <th>Technical event &amp; team</th>
+        <th>Food (technical participants)</th>
+        <th>Payment</th>
+        <th>Created</th>
+      </tr>`;
     }
-  });
-
-  if (!rows.length) {
-    adminTeamBody.innerHTML = '<tr><td class="admin-empty" colspan="5">No team/event data found.</td></tr>';
+    adminTableBody.innerHTML = registrations
+      .map(
+        (r) => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(r.name)}</strong><br>
+          <span class="admin-muted">${escapeHtml(r.email)}</span><br>
+          <span class="admin-muted">${escapeHtml(r.whatsapp)}</span>
+        </td>
+        <td>${escapeHtml(r.year)}<br><span class="admin-muted">${escapeHtml(r.collegeName)}</span><br><span class="admin-muted">${escapeHtml(r.departmentName)}</span></td>
+        <td>${formatAdminTeam(r.technicalTeam, r.technicalEvents)}</td>
+        <td>${formatFoodByPerson(r.technicalTeam)}</td>
+        <td>${renderPaymentScreenshotCell(r.paymentScreenshot)}</td>
+        <td>${escapeHtml(r.createdAt)}</td>
+      </tr>`
+      )
+      .join('');
     return;
   }
 
-  adminTeamBody.innerHTML = rows.map((row) => `
-    <tr>
-      <td>${escapeHtml(row.category)}</td>
-      <td>${escapeHtml(row.event)}</td>
-      <td>${escapeHtml(row.leader)}</td>
-      <td>${escapeHtml(row.members)}</td>
-      <td>${escapeHtml(row.total)}</td>
-    </tr>
-  `).join('');
-}
-
-function renderFoodView(registrations) {
-  if (!adminFoodBody || !adminFoodSummary) return;
-
-  const participants = registrations.flatMap((registration) => getParticipants(registration));
-  const vegCount = participants.filter((participant) => participant.food === 'Veg').length;
-  const nonVegCount = participants.filter((participant) => participant.food === 'Non-Veg').length;
-  const unassignedCount = participants.filter((participant) => !participant.food).length;
-
-  adminFoodSummary.innerHTML = `
-    <div class="admin-food-card"><span>Total Participants</span><strong>${participants.length}</strong></div>
-    <div class="admin-food-card"><span>Veg</span><strong>${vegCount}</strong></div>
-    <div class="admin-food-card"><span>Non-Veg</span><strong>${nonVegCount}</strong></div>
-    <div class="admin-food-card"><span>Not Selected</span><strong>${unassignedCount}</strong></div>
-  `;
-
-  if (!participants.length) {
-    adminFoodBody.innerHTML = '<tr><td class="admin-empty" colspan="6">No food data found.</td></tr>';
+  if (sc === 'nontechnical') {
+    if (adminTableHead) {
+      adminTableHead.innerHTML = `<tr>
+        <th>Participant</th>
+        <th>Year / College / Dept</th>
+        <th>Non-technical event &amp; team</th>
+        <th>Food (non-tech participants)</th>
+        <th>Payment</th>
+        <th>Created</th>
+      </tr>`;
+    }
+    adminTableBody.innerHTML = registrations
+      .map(
+        (r) => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(r.name)}</strong><br>
+          <span class="admin-muted">${escapeHtml(r.email)}</span><br>
+          <span class="admin-muted">${escapeHtml(r.whatsapp)}</span>
+        </td>
+        <td>${escapeHtml(r.year)}<br><span class="admin-muted">${escapeHtml(r.collegeName)}</span><br><span class="admin-muted">${escapeHtml(r.departmentName)}</span></td>
+        <td>${formatAdminTeam(r.nonTechnicalTeam, r.nonTechnicalEvents)}</td>
+        <td>${formatFoodByPerson(r.nonTechnicalTeam)}</td>
+        <td>${renderPaymentScreenshotCell(r.paymentScreenshot)}</td>
+        <td>${escapeHtml(r.createdAt)}</td>
+      </tr>`
+      )
+      .join('');
     return;
   }
 
-  adminFoodBody.innerHTML = participants.map((participant) => `
-    <tr>
-      <td>${escapeHtml(participant.name || 'Unknown')}</td>
-      <td>${escapeHtml(participant.role)}</td>
-      <td>${escapeHtml(participant.technicalEvent || '—')}</td>
-      <td>${escapeHtml(participant.nonTechnicalEvent || '—')}</td>
-      <td>${escapeHtml(participant.food || 'Not selected')}</td>
-      <td>${escapeHtml(participant.leaderName || '—')}</td>
-    </tr>
-  `).join('');
+  if (sc === 'food') {
+    if (adminTableHead) {
+      adminTableHead.innerHTML = `<tr>
+        <th>Participant</th>
+        <th>Technical event</th>
+        <th>Food (tech)</th>
+        <th>Non-technical event</th>
+        <th>Food (non-tech)</th>
+        <th>Created</th>
+      </tr>`;
+    }
+    adminTableBody.innerHTML = registrations
+      .map(
+        (r) => `
+      <tr>
+        <td><strong>${escapeHtml(r.name)}</strong></td>
+        <td>${escapeHtml(r.technicalEvents)}</td>
+        <td>${formatFoodByPerson(r.technicalTeam)}</td>
+        <td>${escapeHtml(r.nonTechnicalEvents)}</td>
+        <td>${formatFoodByPerson(r.nonTechnicalTeam)}</td>
+        <td>${escapeHtml(r.createdAt)}</td>
+      </tr>`
+      )
+      .join('');
+  }
 }
 
 function renderAdminRegistrations(registrations) {
@@ -322,7 +360,9 @@ async function fetchRegistrations(secret) {
     throw new Error(result.detail || result.error || 'Unable to load registrations.');
   }
 
-  return Array.isArray(result.registrations) ? result.registrations : [];
+  const registrations = Array.isArray(result.registrations) ? result.registrations : [];
+  const adminScope = result.adminScope || 'full';
+  return { registrations, adminScope };
 }
 
 async function unlockAdminPortal() {
@@ -335,17 +375,16 @@ async function unlockAdminPortal() {
   setAdminStatus('Verifying admin secret...', null);
 
   try {
-    const registrations = await fetchRegistrations(secret);
-    cachedRegistrations = registrations;
+    const { registrations, adminScope } = await fetchRegistrations(secret);
     unlockedSecret = secret;
     localStorage.setItem('pixelora-admin-secret', secret);
     sessionStorage.setItem(ADMIN_SHORTCUT_AUTH_KEY, String(Date.now()));
-    renderAdminRegistrations(registrations);
+    renderAdminRegistrations(registrations, adminScope);
     setAdminStatus(`Loaded ${registrations.length} registrations.`, 'ok');
   } catch (error) {
     unlockedSecret = '';
     setAdminStatus(error.message || 'Invalid admin secret.', 'err');
-    renderAdminRegistrations([]);
+    renderAdminRegistrations([], 'full');
   }
 }
 
@@ -359,9 +398,8 @@ async function loadAdminRegistrations() {
   setAdminStatus('Loading registrations...', null);
 
   try {
-    const registrations = await fetchRegistrations(secret);
-    cachedRegistrations = registrations;
-    renderAdminRegistrations(registrations);
+    const { registrations, adminScope } = await fetchRegistrations(secret);
+    renderAdminRegistrations(registrations, adminScope);
     setAdminStatus(`Loaded ${registrations.length} registrations.`, 'ok');
   } catch (error) {
     setAdminStatus(error.message || 'Unable to load registrations.', 'err');

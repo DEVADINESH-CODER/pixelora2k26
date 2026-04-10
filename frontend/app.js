@@ -665,6 +665,15 @@ function getSelectedEvent(category) {
   return String(registrationState.selectedEvents?.[category === 'technical' ? 'technical' : 'nonTechnical'] || '').trim();
 }
 
+function getCategoryEventOptions(category) {
+  return CATEGORY_EVENTS[category === 'technical' ? 'technical' : 'nontechnical'] || [];
+}
+
+function isValidCategoryEvent(category, eventName) {
+  if (!eventName) return true;
+  return getCategoryEventOptions(category).some((option) => option.value === eventName);
+}
+
 function getTeamEventMembers(category, eventName) {
   return registrationState.teamMembers.filter((member) => {
     if (category === 'technical') return member.technicalEvent === eventName;
@@ -743,43 +752,39 @@ function renderMemberEventFields(memberDraft) {
   if (!registrationDom.memberEventFields) return;
 
   const selectedTechnicalEvent = getSelectedEvent('technical');
-  const technicalTeamEnabled = Boolean(selectedTechnicalEvent) && isTeamEvent(selectedTechnicalEvent);
   const selectedNonTechnicalEvent = getSelectedEvent('nontechnical');
-  const nonTechnicalTeamEnabled = Boolean(selectedNonTechnicalEvent) && isTeamEvent(selectedNonTechnicalEvent);
+  const technicalOptions = getCategoryEventOptions('technical').map((eventOption) => {
+    const selectedHint = selectedTechnicalEvent && selectedTechnicalEvent === eventOption.value ? ' (Main selected)' : '';
+    return `<option value="${escapeHtml(eventOption.value)}" ${memberDraft.technicalEvent === eventOption.value ? 'selected' : ''}>${escapeHtml(eventOption.label)}${selectedHint}</option>`;
+  }).join('');
 
-  let technicalEventHtml = '';
-  if (technicalTeamEnabled) {
-    technicalEventHtml = `
-      <div class="member-event-group">
-        <h6>Technical Event</h6>
-        <div class="reg-field">
-          <span>Select the technical team event for this member</span>
-          <select id="member-technical-event" name="memberTechnicalEvent">
-            <option value="">Select event</option>
-            <option value="${escapeHtml(selectedTechnicalEvent)}" ${memberDraft.technicalEvent === selectedTechnicalEvent ? 'selected' : ''}>${escapeHtml(selectedTechnicalEvent)}</option>
-          </select>
-        </div>
+  const nonTechnicalOptions = getCategoryEventOptions('nontechnical').map((eventOption) => {
+    const selectedHint = selectedNonTechnicalEvent && selectedNonTechnicalEvent === eventOption.value ? ' (Main selected)' : '';
+    return `<option value="${escapeHtml(eventOption.value)}" ${memberDraft.nonTechnicalEvent === eventOption.value ? 'selected' : ''}>${escapeHtml(eventOption.label)}${selectedHint}</option>`;
+  }).join('');
+
+  registrationDom.memberEventFields.innerHTML = `
+    <div class="member-event-group">
+      <h6>Technical Event (Optional)</h6>
+      <div class="reg-field">
+        <span>Member can choose one technical event independently</span>
+        <select id="member-technical-event" name="memberTechnicalEvent">
+          <option value="">No technical event</option>
+          ${technicalOptions}
+        </select>
       </div>
-    `;
-  }
-
-  let nonTechnicalEventHtml = '';
-  if (nonTechnicalTeamEnabled) {
-    nonTechnicalEventHtml = `
-      <div class="member-event-group">
-        <h6>Non-Technical Event</h6>
-        <div class="reg-field">
-          <span>Select the non-technical team event for this member</span>
-          <select id="member-nontechnical-event" name="memberNonTechnicalEvent">
-            <option value="">Select event</option>
-            <option value="${escapeHtml(selectedNonTechnicalEvent)}" ${memberDraft.nonTechnicalEvent === selectedNonTechnicalEvent ? 'selected' : ''}>${escapeHtml(selectedNonTechnicalEvent)}</option>
-          </select>
-        </div>
+    </div>
+    <div class="member-event-group">
+      <h6>Non-Technical Event (Optional)</h6>
+      <div class="reg-field">
+        <span>Member can choose one non-technical event independently</span>
+        <select id="member-nontechnical-event" name="memberNonTechnicalEvent">
+          <option value="">No non-technical event</option>
+          ${nonTechnicalOptions}
+        </select>
       </div>
-    `;
-  }
-
-  registrationDom.memberEventFields.innerHTML = `${technicalEventHtml}${nonTechnicalEventHtml}` || '<p class="member-empty">No team event is selected.</p>';
+    </div>
+  `;
 
   const technicalSelect = document.getElementById('member-technical-event');
   if (technicalSelect) {
@@ -1072,17 +1077,15 @@ function syncEventSelectionFromForm() {
   const nonTechnicalEvent = registrationInputs.nonTechnicalEvents.find((input) => input.checked)?.value || '';
   registrationState.selectedEvents = { technical: technicalEvent, nonTechnical: nonTechnicalEvent };
 
-  const technicalTeamEnabled = Boolean(technicalEvent) && isTeamEvent(technicalEvent);
-  const nonTechnicalTeamEnabled = Boolean(nonTechnicalEvent) && isTeamEvent(nonTechnicalEvent);
   registrationState.teamMembers = registrationState.teamMembers
     .map((member) => {
       const nextMember = { ...member };
-      if (!technicalTeamEnabled || nextMember.technicalEvent !== technicalEvent) {
+      if (!isValidCategoryEvent('technical', nextMember.technicalEvent)) {
         nextMember.technicalEvent = '';
         nextMember.technical_used = false;
       }
 
-      if (!nonTechnicalTeamEnabled || nextMember.nonTechnicalEvent !== nonTechnicalEvent) {
+      if (!isValidCategoryEvent('nontechnical', nextMember.nonTechnicalEvent)) {
         nextMember.nonTechnicalEvent = '';
         nextMember.nontechnical_used = false;
       }
@@ -1092,12 +1095,12 @@ function syncEventSelectionFromForm() {
     .filter((member) => Boolean(member.technicalEvent || member.nonTechnicalEvent));
 
   if (registrationState.draftMember) {
-    if (!technicalTeamEnabled || registrationState.draftMember.technicalEvent !== technicalEvent) {
+    if (!isValidCategoryEvent('technical', registrationState.draftMember.technicalEvent)) {
       registrationState.draftMember.technicalEvent = '';
       registrationState.draftMember.technical_used = false;
     }
 
-    if (!nonTechnicalTeamEnabled || registrationState.draftMember.nonTechnicalEvent !== nonTechnicalEvent) {
+    if (!isValidCategoryEvent('nontechnical', registrationState.draftMember.nonTechnicalEvent)) {
       registrationState.draftMember.nonTechnicalEvent = '';
       registrationState.draftMember.nontechnical_used = false;
     }
@@ -1163,27 +1166,15 @@ function validateMemberDraft(memberDraft) {
   if (!String(memberDraft.name || '').trim()) return 'Please enter the member name.';
   if (!String(memberDraft.email || '').trim()) return 'Please enter the member email.';
   if (!String(memberDraft.phone || '').trim()) return 'Please enter the member phone.';
+  if (!String(memberDraft.food || '').trim()) return 'Please select the member food preference.';
   if (!/^\S+@\S+\.\S+$/.test(memberDraft.email)) return 'Please enter a valid member email address.';
 
-  const selectedTechnicalEvent = getSelectedEvent('technical');
-  const selectedNonTechnicalEvent = getSelectedEvent('nontechnical');
-  const technicalTeamEnabled = Boolean(selectedTechnicalEvent) && isTeamEvent(selectedTechnicalEvent);
-  const nonTechnicalTeamEnabled = Boolean(selectedNonTechnicalEvent) && isTeamEvent(selectedNonTechnicalEvent);
-
-  if (memberDraft.technicalEvent) {
-    if (!technicalTeamEnabled || memberDraft.technicalEvent !== selectedTechnicalEvent) {
-      return 'Member technical event is not valid.';
-    }
+  if (!isValidCategoryEvent('technical', memberDraft.technicalEvent)) {
+    return 'Member technical event is not valid.';
   }
 
-  if (memberDraft.nonTechnicalEvent) {
-    if (!nonTechnicalTeamEnabled || memberDraft.nonTechnicalEvent !== selectedNonTechnicalEvent) {
-      return 'Member non-technical event is not valid.';
-    }
-  }
-
-  if ((technicalTeamEnabled || nonTechnicalTeamEnabled) && !memberDraft.technicalEvent && !memberDraft.nonTechnicalEvent) {
-    return 'Assign this member to at least one selected team event.';
+  if (!isValidCategoryEvent('nontechnical', memberDraft.nonTechnicalEvent)) {
+    return 'Member non-technical event is not valid.';
   }
 
   return '';
@@ -1235,23 +1226,12 @@ function openMemberEditor(memberId = '') {
   const existingMember = registrationState.teamMembers.find((member) => member.memberId === memberId);
   registrationState.draftMember = existingMember ? cloneJson(existingMember) : blankMemberDraft(createNextMemberId());
 
-  const selectedTechnicalEvent = getSelectedEvent('technical');
-  const technicalTeamEnabled = Boolean(selectedTechnicalEvent) && isTeamEvent(selectedTechnicalEvent);
-  const selectedNonTechnicalEvent = getSelectedEvent('nontechnical');
-  const nonTechnicalTeamEnabled = Boolean(selectedNonTechnicalEvent) && isTeamEvent(selectedNonTechnicalEvent);
-
-  if (!technicalTeamEnabled) {
-    registrationState.draftMember.technicalEvent = '';
-    registrationState.draftMember.technical_used = false;
-  } else if (registrationState.draftMember.technicalEvent && registrationState.draftMember.technicalEvent !== selectedTechnicalEvent) {
+  if (!isValidCategoryEvent('technical', registrationState.draftMember.technicalEvent)) {
     registrationState.draftMember.technicalEvent = '';
     registrationState.draftMember.technical_used = false;
   }
 
-  if (!nonTechnicalTeamEnabled) {
-    registrationState.draftMember.nonTechnicalEvent = '';
-    registrationState.draftMember.nontechnical_used = false;
-  } else if (registrationState.draftMember.nonTechnicalEvent && registrationState.draftMember.nonTechnicalEvent !== selectedNonTechnicalEvent) {
+  if (!isValidCategoryEvent('nontechnical', registrationState.draftMember.nonTechnicalEvent)) {
     registrationState.draftMember.nonTechnicalEvent = '';
     registrationState.draftMember.nontechnical_used = false;
   }

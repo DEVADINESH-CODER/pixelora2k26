@@ -415,10 +415,16 @@ footer{padding:clamp(50px,8vw,90px) clamp(5%,8vw,10%);border-top:1px solid var(-
 .admin-controls{display:flex;gap:1rem;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
 .admin-secret-field{display:flex;flex-direction:column;gap:.45rem;min-width:min(360px,100%)}
 .admin-secret-field span{font-size:.7rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:700}
-.admin-secret-field input{width:100%;padding:.9rem 1rem;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--txt);font:inherit;outline:none}
+.admin-secret-field input,.admin-secret-field select{width:100%;padding:.9rem 1rem;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--txt);font:inherit;outline:none}
+.admin-secret-field select option{background:rgba(var(--panel-rgb),.95);color:var(--txt)}
+.admin-filter-field{min-width:min(240px,100%)}
 .admin-actions{display:flex;gap:.8rem;flex-wrap:wrap}
 .admin-btn{min-width:160px}
 .admin-status{min-height:1.2rem;font-size:.85rem;opacity:.85}
+.admin-view-note{font-size:.82rem;opacity:.86}
+.admin-view{display:none;gap:.65rem}
+.admin-view.active{display:grid}
+.admin-view h3{font-size:1rem;letter-spacing:.8px;text-transform:uppercase}
 .admin-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.02);max-height:60vh}
 .admin-table{width:100%;border-collapse:collapse;min-width:900px}
 .admin-table th,.admin-table td{padding:.9rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top;text-align:left;font-size:.84rem}
@@ -430,6 +436,10 @@ footer{padding:clamp(50px,8vw,90px) clamp(5%,8vw,10%);border-top:1px solid var(-
 .admin-empty{padding:2rem;text-align:center;opacity:.84}
 .admin-view-link{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .75rem;border-radius:999px;border:1px solid rgba(var(--accent-rgb),.5);background:rgba(var(--accent-rgb),.2);color:var(--txt);font-size:.74rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;text-decoration:none;transition:transform .2s var(--ease),filter .2s var(--ease),border-color .2s var(--ease)}
 .admin-view-link:hover{transform:translateY(-1px);filter:brightness(1.08);border-color:rgba(var(--accent-rgb),.72)}
+.admin-food-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.8rem}
+.admin-food-card{padding:.8rem .9rem;border:1px solid rgba(var(--accent-rgb),.35);border-radius:12px;background:rgba(var(--accent-rgb),.13);display:grid;gap:.18rem}
+.admin-food-card span{font-size:.7rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.admin-food-card strong{font-size:1.25rem}
 
 @media(max-width:768px){
   .admin-shell{max-height:95vh}

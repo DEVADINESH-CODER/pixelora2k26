@@ -31,9 +31,23 @@
         <span>Admin Secret</span>
         <input type="password" id="admin-secret" placeholder="Enter admin secret" autocomplete="off">
       </label>
+      <label class="admin-secret-field admin-filter-field">
+        <span>View Filter</span>
+        <select id="admin-view-filter">
+          <option value="all">All Registrations</option>
+          <option value="technical">Technical only</option>
+          <option value="nontechnical">Non-Technical only</option>
+          <option value="both">Both categories</option>
+        </select>
+      </label>
+      <label class="admin-secret-field admin-filter-field">
+        <span>Page Code</span>
+        <input type="text" id="admin-page-code" placeholder="REG / TEAM / FOOD" autocomplete="off">
+      </label>
       <div class="admin-actions">
         <button type="button" class="btn bm admin-btn" id="admin-unlock">Unlock</button>
         <button type="button" class="btn bo admin-btn" id="admin-refresh">Refresh</button>
+        <button type="button" class="btn bo admin-btn" id="admin-open-view">Open View</button>
         <button type="button" class="btn bm admin-btn" id="admin-download">Download CSV</button>
         <button type="button" class="btn bo admin-btn" id="admin-reset">Delete All Data</button>
       </div>
@@ -41,23 +55,70 @@
 
     <p id="admin-status" class="admin-status" aria-live="polite"></p>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Year</th>
-            <th>Technical</th>
-            <th>Non-Technical</th>
-            <th>Food</th>
-            <th>Payment</th>
-            <th>Created</th>
-          </tr>
-        </thead>
-        <tbody id="admin-table-body">
-          <tr><td class="admin-empty" colspan="7">Enter admin secret and click Unlock.</td></tr>
-        </tbody>
-      </table>
+    <p class="admin-view-note">Use codes: <strong>REG</strong> (registration), <strong>TEAM</strong> (team/event details), <strong>FOOD</strong> (food preference details)</p>
+
+    <section class="admin-view active" id="admin-view-registration">
+      <h3>Registration View</h3>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Leader</th>
+              <th>Technical Event</th>
+              <th>Non-Technical Event</th>
+              <th>Members (with food)</th>
+              <th>Payment</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="admin-registration-body">
+            <tr><td class="admin-empty" colspan="6">Enter admin secret and click Unlock.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="admin-view" id="admin-view-team">
+      <h3>Team View</h3>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Event</th>
+              <th>Leader</th>
+              <th>Members</th>
+              <th>Total Count</th>
+            </tr>
+          </thead>
+          <tbody id="admin-team-body">
+            <tr><td class="admin-empty" colspan="5">No team data loaded yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="admin-view" id="admin-view-food">
+      <h3>Food View</h3>
+      <div id="admin-food-summary" class="admin-food-summary"></div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Role</th>
+              <th>Technical</th>
+              <th>Non-Technical</th>
+              <th>Food</th>
+              <th>Leader</th>
+            </tr>
+          </thead>
+          <tbody id="admin-food-body">
+            <tr><td class="admin-empty" colspan="6">No food data loaded yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
     </div>
   </section>
 </main>

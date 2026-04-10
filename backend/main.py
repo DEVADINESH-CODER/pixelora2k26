@@ -201,6 +201,23 @@ def normalize_record(record: dict) -> dict:
     }
 
 
+def normalize_team_member(member: object) -> dict:
+    source = member if isinstance(member, dict) else {"name": str(member or "").strip()}
+    food_value = str(source.get("food", "")).strip()
+
+    return {
+        "memberId": str(source.get("memberId", "")).strip(),
+        "name": str(source.get("name", "")).strip(),
+        "email": str(source.get("email", "")).strip(),
+        "phone": str(source.get("phone", "")).strip(),
+        "food": food_value if food_value in ALLOWED_FOOD else "",
+        "technical_used": bool(source.get("technical_used")),
+        "nontechnical_used": bool(source.get("nontechnical_used")),
+        "technicalEvent": str(source.get("technicalEvent", "")).strip(),
+        "nonTechnicalEvent": str(source.get("nonTechnicalEvent", "")).strip(),
+    }
+
+
 def load_local_registrations() -> list[dict]:
     records: list[dict] = []
 
@@ -547,8 +564,9 @@ async def create_registration(
     if teamMembers:
         try:
             parsed_team_members = [
-                member if isinstance(member, dict) else {"value": member}
+                normalize_team_member(member)
                 for member in json.loads(teamMembers)
+                if isinstance(member, (dict, str))
             ]
         except json.JSONDecodeError:
             parsed_team_members = []
